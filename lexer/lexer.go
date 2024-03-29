@@ -16,11 +16,17 @@ func (l *Lexer) NextToken() token.Token {
 
 	l.skipWhitespace()
 
+	// TODO: Abstract the double char operators into a method
 	switch l.ch {
 	case '=':
+		if l.peekChar() == '=' { // check if == operator
+			ch := l.ch
+			l.readChar()
+			tok = token.Token{Type: token.EQ, Literal: string(ch) + string(l.ch)}
+		} else {
+			tok = newToken(token.ASSIGN, l.ch)
+		}
 		tok = newToken(token.ASSIGN, l.ch)
-	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':
@@ -29,12 +35,34 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.COMMA, l.ch)
 	case '+':
 		tok = newToken(token.PLUS, l.ch)
+	case '-':
+		tok = newToken(token.MINUS, l.ch)
 	case '{':
 		tok = newToken(token.LBRACE, l.ch)
 	case '}':
 		tok = newToken(token.RBRACE, l.ch)
-		// 0 == nil since byte
-	case 0:
+	case '!':
+		if l.peekChar() == '=' {
+			// Save current char so we dont lose it and can safely advance
+			// the lexer and NextToken() has the correct state
+			ch := l.ch
+			l.readChar()
+			tok = token.Token{Type: token.NOT_EQ, Literal: string(ch) + string(l.ch)}
+		} else {
+			tok = newToken(token.BANG, l.ch)
+		}
+		tok = newToken(token.BANG, l.ch)
+	case '*':
+		tok = newToken(token.ASTERISK, l.ch)
+	case '/':
+		tok = newToken(token.SLASH, l.ch)
+	case '<':
+		tok = newToken(token.LT, l.ch)
+	case '>':
+		tok = newToken(token.GT, l.ch)
+	case ';':
+		tok = newToken(token.SEMICOLON, l.ch)
+	case 0: // 0 == nil since byte
 		tok.Literal = ""
 		tok.Type = token.EOF
 	default:
@@ -53,6 +81,15 @@ func (l *Lexer) NextToken() token.Token {
 
 	l.readChar()
 	return tok
+}
+
+// Similar to readChar() but doesn't increment
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.readPosition]
+	}
 }
 
 func (l *Lexer) readNumber() string {
